@@ -2,11 +2,13 @@ import express from "express"
 import http from "http"
 import socketIo, { Socket } from "socket.io"
 
+import { RuleSet } from "the-game-lib/dist/game/RuleSet"
+
 import { GameStartResult } from "the-game-lib/dist/models/GameData"
 import { Message } from "the-game-lib/dist/models/Message"
 import { RoomWith } from "the-game-lib/dist/models/RoomWith"
-import { RuleSet } from "the-game-lib/dist/models/RuleSet"
-import { VoteResult } from "the-game-lib/dist/models/voting/Vote"
+
+import { VoteResult } from "the-game-lib/dist/voting/Vote"
 
 import { GameServer } from "./GameServer"
 

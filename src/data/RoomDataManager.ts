@@ -1,7 +1,9 @@
+import { RuleSet } from "the-game-lib/dist/game/RuleSet"
+
 import { GameStartResult } from "the-game-lib/dist/models/GameData"
 import { RoomData } from "the-game-lib/dist/models/RoomData"
-import { RuleSet } from "the-game-lib/dist/models/RuleSet"
-import { VoteResult } from "the-game-lib/dist/models/voting/Vote"
+
+import { VoteResult } from "the-game-lib/dist/voting/Vote"
 
 import { IRoomDataManager } from "./rooms/IRoomDataManager"
 
@@ -109,6 +111,7 @@ export class RoomDataManager implements IRoomDataManager {
         if (this.roomExists(roomName)) {
             let gameData = this.getGameData(roomName)
             gameData.replenish()
+            gameData.endTurn()
             let nextPlayer = gameData.nextPlayer()
             console.log(`It is now player ${nextPlayer}'s turn in room ${roomName}`)
         }
@@ -282,16 +285,14 @@ export class RoomDataManager implements IRoomDataManager {
             let gameData = this.getGameData(roomName)
             gameData.playCard(player, card, pileIndex)
 
-            let isWon = gameData.checkForWin()
-            if (isWon) {
+            if (gameData.isWon()) {
                 console.log(`Game is won in room ${roomName}!`)
             }
             else {
                 console.log(`Game is not yet won in room ${roomName}.`)
             }
 
-            let isLost = gameData.checkForLoss()
-            if (isLost) {
+            if (gameData.isLost()) {
                 console.log(`Game is lost in room ${roomName}!`)
             }
             else {
