@@ -287,6 +287,7 @@ export class RoomDataManager implements IRoomDataManager {
 
             if (gameData.isWon()) {
                 console.log(`Game is won in room ${roomName}!`)
+                return
             }
             else {
                 console.log(`Game is not yet won in room ${roomName}.`)
