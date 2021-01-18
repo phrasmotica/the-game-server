@@ -107,10 +107,15 @@ export class RoomDataManager implements IRoomDataManager {
     /**
      * Ends the turn in the given room.
      */
-    onTurnEnd(roomName: string) {
+    onTurnEnd(roomName: string, autoSortHand: boolean) {
         if (this.roomExists(roomName)) {
             let gameData = this.getGameData(roomName)
             gameData.replenish()
+
+            if (autoSortHand) {
+                gameData.sortHand(gameData.getCurrentPlayer()!)
+            }
+
             gameData.endTurn()
             let nextPlayer = gameData.nextPlayer()
             console.log(`It is now player ${nextPlayer}'s turn in room ${roomName}`)

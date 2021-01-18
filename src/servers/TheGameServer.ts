@@ -86,7 +86,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
             socket.on("playCard", (req: RoomWith<[string, number, number]>) => this.playCard(req))
 
-            socket.on("endTurn", (roomName: string) => this.endTurn(roomName))
+            socket.on("endTurn", (req: RoomWith<boolean>) => this.endTurn(req))
 
             socket.on("leaveGame", (req: RoomWith<string>) => this.leaveGame(socket, req))
 
@@ -448,10 +448,10 @@ export class TheGameServer extends GameServer<ServerSettings> {
     /**
      * Handler for a player ending their turn in the given room.
      */
-    private endTurn(roomName: string) {
-        this.roomDataManager.onTurnEnd(roomName)
+    private endTurn(req: RoomWith<boolean>) {
+        this.roomDataManager.onTurnEnd(req.roomName, req.data)
 
-        this.sendRoomData(roomName)
+        this.sendRoomData(req.roomName)
     }
 
     /**

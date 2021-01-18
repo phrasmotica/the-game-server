@@ -47,7 +47,7 @@ export interface IRoomDataManager {
     /**
      * Ends the turn in the given room.
      */
-    onTurnEnd(roomName: string): void
+    onTurnEnd(roomName: string, autoSortHand: boolean): void
 
     /**
      * Clears the game data in the given room.
