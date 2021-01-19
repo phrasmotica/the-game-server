@@ -18,18 +18,13 @@ import { SocketManager } from "../data/SocketManager"
 import { RoomDataManager } from "../data/RoomDataManager"
 
 /**
- * The name of the default room on the server.
- */
-const DEFAULT_ROOM_NAME = "bababooey"
-
-/**
  * Represents a server for The Game.
  */
 export class TheGameServer extends GameServer<ServerSettings> {
     /**
      * List of rooms that should persist.
      */
-    private readonly roomRetentionList = [DEFAULT_ROOM_NAME]
+    private readonly roomRetentionList: string[]
 
     /**
      * Constructor.
@@ -40,6 +35,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
         private roomDataManager: RoomDataManager
     ) {
         super(serverSettings, socketManager)
+        this.roomRetentionList = [...serverSettings.roomNames]
     }
 
     /**
@@ -104,7 +100,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
      * Starts the server.
      */
     start() {
-        this.roomDataManager.ensureRoomExists(DEFAULT_ROOM_NAME)
+        this.serverSettings.roomNames.forEach(n => this.roomDataManager.ensureRoomExists(n))
 
         const port = this.serverSettings.port
         this.server.listen(port, () => console.log(`Listening on port ${port}`))
