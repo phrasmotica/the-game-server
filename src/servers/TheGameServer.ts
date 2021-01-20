@@ -66,6 +66,8 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
             socket.on("spectateRoom", (req: RoomWith<string>) => this.spectateRoom(socket, req))
 
+            socket.on("allPlayersData", (playerName: string) => this.allPlayersData(socket, playerName))
+
             socket.on("allLobbyData", (playerName: string) => this.allLobbyData(socket, playerName))
 
             socket.on("setRuleSet", (req: RoomWith<RuleSet>) => this.setRuleSet(req))
@@ -104,6 +106,13 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
         const port = this.serverSettings.port
         this.server.listen(port, () => console.log(`Listening on port ${port}`))
+    }
+
+    /**
+     * Sends the data for all players to the clients.
+     */
+    private sendAllPlayersData() {
+        this.io.emit("allPlayersData", this.socketManager.getAllPlayersData())
     }
 
     /**
@@ -184,6 +193,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
         console.log(`Player ${playerName} joined the server!`)
 
         socket.emit("joinServerResult", true)
+        this.sendAllPlayersData()
     }
 
     /**
@@ -293,6 +303,15 @@ export class TheGameServer extends GameServer<ServerSettings> {
         else {
             console.error(`Player ${playerName} could not spectate room ${roomName}!`)
         }
+    }
+
+    /**
+     * Handler for a player requesting data for all players.
+     */
+    private allPlayersData(socket: Socket, playerName: string) {
+        console.log(`Player ${playerName} refreshed player data.`)
+
+        socket.emit("allPlayersData", this.socketManager.getAllPlayersData())
     }
 
     /**
@@ -548,6 +567,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
             this.socketManager.removeSocket(playerName)
             this.socketManager.removePlayerName(socket.id)
+            this.sendAllPlayersData()
 
             console.log(`Player ${playerName} left the server.`)
         }

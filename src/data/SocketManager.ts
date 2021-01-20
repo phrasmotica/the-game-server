@@ -29,6 +29,13 @@ export class SocketManager {
     sockets: SocketMap = {}
 
     /**
+     * Returns data for all players.
+     */
+    getAllPlayersData() {
+        return Object.keys(this.sockets)
+    }
+
+    /**
      * Returns the player name for the given socket ID.
      */
     getPlayerName(socketId: string) {
