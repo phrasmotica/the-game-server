@@ -68,7 +68,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
             socket.on("allPlayersData", (playerName: string) => this.allPlayersData(socket, playerName))
 
-            socket.on("allLobbyData", (playerName: string) => this.allLobbyData(socket, playerName))
+            socket.on("allRoomData", (playerName: string) => this.allRoomData(socket, playerName))
 
             socket.on("setRuleSet", (req: RoomWith<RuleSet>) => this.setRuleSet(req))
 
@@ -128,14 +128,14 @@ export class TheGameServer extends GameServer<ServerSettings> {
     private sendRoomData(roomName: string) {
         let message = this.createRoomDataMessage(roomName)
         this.io.in(roomName).emit("roomData", message)
-        this.io.emit("lobbyData", message)
+        this.io.emit("roomData", message)
     }
 
     /**
      * Sends the data for removing the given room to the clients.
      */
     private sendRemoveRoomData(roomName: string) {
-        this.io.emit("removeLobbyData", roomName)
+        this.io.emit("removeRoomData", roomName)
     }
 
     /**
@@ -317,10 +317,10 @@ export class TheGameServer extends GameServer<ServerSettings> {
     /**
      * Handler for a player requesting data for all rooms.
      */
-    private allLobbyData(socket: Socket, playerName: string) {
-        console.log(`Player ${playerName} refreshed lobby data.`)
+    private allRoomData(socket: Socket, playerName: string) {
+        console.log(`Player ${playerName} refreshed room data.`)
 
-        socket.emit("allLobbyData", this.roomDataManager.getAllRoomData())
+        socket.emit("allRoomData", this.roomDataManager.getAllRoomData())
     }
 
     /**
