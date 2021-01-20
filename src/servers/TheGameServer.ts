@@ -2,13 +2,8 @@ import express from "express"
 import http from "http"
 import socketIo, { Socket } from "socket.io"
 
-import { RuleSet } from "the-game-lib/dist/game/RuleSet"
-
-import { GameStartResult } from "the-game-lib/dist/models/GameData"
-import { Message } from "the-game-lib/dist/models/Message"
-import { RoomWith } from "the-game-lib/dist/models/RoomWith"
-
-import { VoteResult } from "the-game-lib/dist/voting/Vote"
+import { Message, RoomWith } from "game-server-lib"
+import { GameData, GameStartResult, RuleSet, VoteResult } from "the-game-lib"
 
 import { GameServer } from "./GameServer"
 
@@ -32,7 +27,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
     constructor(
         serverSettings: ServerSettings,
         socketManager: SocketManager,
-        private roomDataManager: RoomDataManager
+        private roomDataManager: RoomDataManager<GameData>
     ) {
         super(serverSettings, socketManager)
         this.roomRetentionList = [...serverSettings.roomNames]
@@ -60,23 +55,23 @@ export class TheGameServer extends GameServer<ServerSettings> {
         io.on("connection", (socket: Socket) => {
             socket.on("joinServer", (playerName: string) => this.joinServer(socket, playerName))
 
+            socket.on("allPlayersData", (playerName: string) => this.allPlayersData(socket, playerName))
+
+            socket.on("allRoomData", (playerName: string) => this.allRoomData(socket, playerName))
+
             socket.on("createRoom", (roomName: string) => this.createRoom(socket, roomName))
 
             socket.on("joinRoom", (req: RoomWith<string>) => this.joinRoom(socket, req))
 
             socket.on("spectateRoom", (req: RoomWith<string>) => this.spectateRoom(socket, req))
 
-            socket.on("allPlayersData", (playerName: string) => this.allPlayersData(socket, playerName))
-
-            socket.on("allRoomData", (playerName: string) => this.allRoomData(socket, playerName))
-
             socket.on("setRuleSet", (req: RoomWith<RuleSet>) => this.setRuleSet(req))
+
+            socket.on("startGame", (roomName: string) => this.startGame(roomName))
 
             socket.on("addVoteForStartingPlayer", (req: RoomWith<[string, string]>) => this.addVoteForStartingPlayer(req))
 
             socket.on("removeVoteForStartingPlayer", (req: RoomWith<string>) => this.removeVoteForStartingPlayer(req))
-
-            socket.on("startGame", (roomName: string) => this.startGame(roomName))
 
             socket.on("sortHand", (req: RoomWith<string>) => this.sortHand(req))
 
@@ -169,7 +164,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
             }
 
             this.roomDataManager.clear(roomName)
-            this.roomDataManager.setRuleSet(roomName, RuleSet.default())
+            this.roomDataManager.getGameData(roomName).setRuleSet(RuleSet.default())
 
             let shouldRemoveRoom = !this.roomRetentionList.includes(roomName)
             if (shouldRemoveRoom) {
@@ -194,6 +189,24 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
         socket.emit("joinServerResult", true)
         this.sendAllPlayersData()
+    }
+
+    /**
+     * Handler for a player requesting data for all players.
+     */
+    private allPlayersData(socket: Socket, playerName: string) {
+        console.log(`Player ${playerName} refreshed player data.`)
+
+        socket.emit("allPlayersData", this.socketManager.getAllPlayersData())
+    }
+
+    /**
+     * Handler for a player requesting data for all rooms.
+     */
+    private allRoomData(socket: Socket, playerName: string) {
+        console.log(`Player ${playerName} refreshed room data.`)
+
+        socket.emit("allRoomData", this.roomDataManager.getAllRoomData())
     }
 
     /**
@@ -306,108 +319,12 @@ export class TheGameServer extends GameServer<ServerSettings> {
     }
 
     /**
-     * Handler for a player requesting data for all players.
-     */
-    private allPlayersData(socket: Socket, playerName: string) {
-        console.log(`Player ${playerName} refreshed player data.`)
-
-        socket.emit("allPlayersData", this.socketManager.getAllPlayersData())
-    }
-
-    /**
-     * Handler for a player requesting data for all rooms.
-     */
-    private allRoomData(socket: Socket, playerName: string) {
-        console.log(`Player ${playerName} refreshed room data.`)
-
-        socket.emit("allRoomData", this.roomDataManager.getAllRoomData())
-    }
-
-    /**
      * Handler for a player changing the rule set in the given room.
      */
     private setRuleSet(req: RoomWith<RuleSet>) {
         let roomName = req.roomName
         let ruleSet = RuleSet.from(req.data)
-        this.roomDataManager.setRuleSet(roomName, ruleSet)
-
-        this.sendRoomData(roomName)
-    }
-
-    /**
-     * Handler for a player adding a vote for the starting player in the given room.
-     */
-    private addVoteForStartingPlayer(req: RoomWith<[string, string]>) {
-        let roomName = req.roomName
-        let playerName = req.data[0]
-        let startingPlayerName = req.data[1]
-
-        let voteResult = this.roomDataManager.addStartingPlayerVote(roomName, playerName, startingPlayerName)
-        switch (voteResult) {
-            case VoteResult.Success:
-                console.log(`Player ${playerName} voted for ${startingPlayerName} to start game in room ${roomName}.`)
-                break;
-
-            case VoteResult.Denied:
-                console.log(`Player ${playerName} was not allowed to vote for a starting player in room ${roomName}.`)
-                break;
-
-            case VoteResult.Closed:
-                console.log(`Player ${playerName} could not cast their starting player vote in room ${roomName} because the vote is closed!`)
-                break;
-
-            case VoteResult.NonExistent:
-                console.log(`Player ${playerName} could not cast their starting player vote in non-existent room ${roomName}!`)
-                break;
-        }
-
-        let voteComplete = this.roomDataManager.isStartingPlayerVoteComplete(roomName)
-        if (voteComplete) {
-            let gameStartResult = this.roomDataManager.setStartingPlayer(roomName)
-            switch (gameStartResult) {
-                case GameStartResult.Success:
-                    let startingPlayer = this.roomDataManager.getStartingPlayer(roomName)
-                    console.log(`Player ${startingPlayer} has been voted to start the game in room ${roomName}.`)
-                    break;
-
-                case GameStartResult.NoStartingPlayer:
-                    console.log(`Could not set starting player in room ${roomName} as no player has won the vote!`)
-                    break;
-
-                case GameStartResult.NonExistent:
-                    console.log(`Could not set starting player in non-existent room ${roomName}!`)
-                    break;
-            }
-        }
-
-        this.sendRoomData(roomName)
-    }
-
-    /**
-     * Handler for a player removing their vote for the starting player in the given room.
-     */
-    private removeVoteForStartingPlayer(req: RoomWith<string>) {
-        let roomName = req.roomName
-        let playerName = req.data
-
-        let voteResult = this.roomDataManager.removeStartingPlayerVote(roomName, playerName)
-        switch (voteResult) {
-            case VoteResult.Success:
-                console.log(`Player ${playerName} removed their starting player vote in room ${roomName}.`)
-                break;
-
-            case VoteResult.Denied:
-                console.log(`Player ${playerName} was not allowed to remove a vote for a starting player in room ${roomName}.`)
-                break;
-
-            case VoteResult.Closed:
-                console.log(`Player ${playerName} could not remove their starting player vote in room ${roomName} because the vote is closed!`)
-                break;
-
-            case VoteResult.NonExistent:
-                console.log(`Player ${playerName} could not cast their starting player vote in non-existent room ${roomName}!`)
-                break;
-        }
+        this.roomDataManager.getGameData(roomName).setRuleSet(ruleSet)
 
         this.sendRoomData(roomName)
     }
@@ -423,13 +340,81 @@ export class TheGameServer extends GameServer<ServerSettings> {
     }
 
     /**
+     * Handler for a player adding a vote for the starting player in the given room.
+     */
+    private addVoteForStartingPlayer(req: RoomWith<[string, string]>) {
+        let roomName = req.roomName
+        let playerName = req.data[0]
+        let startingPlayerName = req.data[1]
+
+        let gameData = this.roomDataManager.getGameData(roomName)
+        let voteResult = gameData.addStartingPlayerVote(playerName, startingPlayerName)
+        switch (voteResult) {
+            case VoteResult.Success:
+                console.log(`Player ${playerName} voted for ${startingPlayerName} to start game in room ${roomName}.`)
+                break;
+
+            case VoteResult.Denied:
+                console.log(`Player ${playerName} was not allowed to vote for a starting player in room ${roomName}.`)
+                break;
+
+            case VoteResult.Closed:
+                console.log(`Player ${playerName} could not cast their starting player vote in room ${roomName} because the vote is closed!`)
+                break;
+        }
+
+        let voteComplete = gameData.isStartingPlayerVoteComplete()
+        if (voteComplete) {
+            let gameStartResult = gameData.setStartingPlayer()
+            switch (gameStartResult) {
+                case GameStartResult.Success:
+                    let startingPlayer = gameData.startingPlayer
+                    console.log(`Player ${startingPlayer} has been voted to start the game in room ${roomName}.`)
+                    break;
+
+                case GameStartResult.NoStartingPlayer:
+                    console.log(`Could not set starting player in room ${roomName} as no player has won the vote!`)
+                    break;
+            }
+        }
+
+        this.sendRoomData(roomName)
+    }
+
+    /**
+     * Handler for a player removing their vote for the starting player in the given room.
+     */
+    private removeVoteForStartingPlayer(req: RoomWith<string>) {
+        let roomName = req.roomName
+        let playerName = req.data
+
+        let gameData = this.roomDataManager.getGameData(roomName)
+        let voteResult = gameData.removeStartingPlayerVote(playerName)
+        switch (voteResult) {
+            case VoteResult.Success:
+                console.log(`Player ${playerName} removed their starting player vote in room ${roomName}.`)
+                break;
+
+            case VoteResult.Denied:
+                console.log(`Player ${playerName} was not allowed to remove a vote for a starting player in room ${roomName}.`)
+                break;
+
+            case VoteResult.Closed:
+                console.log(`Player ${playerName} could not remove their starting player vote in room ${roomName} because the vote is closed!`)
+                break;
+        }
+
+        this.sendRoomData(roomName)
+    }
+
+    /**
      * Handler for a player sorting their hand.
      */
     private sortHand(req: RoomWith<string>) {
         let roomName = req.roomName
         let playerName = req.data
 
-        this.roomDataManager.sortHand(roomName, playerName)
+        this.roomDataManager.getGameData(roomName).sortHand(playerName)
 
         this.sendRoomData(roomName)
     }
@@ -441,7 +426,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
         let roomName = res.roomName
         let cardToPlay = res.data
 
-        this.roomDataManager.setCardToPlay(roomName, cardToPlay)
+        this.roomDataManager.getGameData(roomName).setCardToPlay(cardToPlay)
 
         this.sendRoomData(roomName)
     }
@@ -455,7 +440,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
         let card = req.data[1]
         let pileIndex = req.data[2]
 
-        this.roomDataManager.playCard(roomName, player, card, pileIndex)
+        this.roomDataManager.getGameData(roomName).playCard(player, card, pileIndex)
 
         this.sendRoomData(roomName)
     }
@@ -464,9 +449,21 @@ export class TheGameServer extends GameServer<ServerSettings> {
      * Handler for a player ending their turn in the given room.
      */
     private endTurn(req: RoomWith<boolean>) {
-        this.roomDataManager.onTurnEnd(req.roomName, req.data)
+        let roomName = req.roomName
+        let autoSortHand = req.data
 
-        this.sendRoomData(req.roomName)
+        let gameData = this.roomDataManager.getGameData(roomName)
+
+        gameData.endTurn()
+        gameData.replenish()
+
+        if (autoSortHand) {
+            gameData.sortHand(gameData.getCurrentPlayer()!)
+        }
+
+        gameData.nextPlayer()
+
+        this.sendRoomData(roomName)
     }
 
     /**
@@ -476,7 +473,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
         let roomName = req.roomName
         let playerName = req.data
 
-        let success = this.roomDataManager.removeFromRoom(playerName, roomName)
+        let success = this.roomDataManager.removePlayerFromRoom(playerName, roomName)
         socket.emit("leaveGameResult", success)
         socket.leave(roomName)
 
@@ -532,7 +529,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
         let roomName = req.roomName
         let playerName = req.data
 
-        let success = this.roomDataManager.removeFromRoom(playerName, roomName)
+        let success = this.roomDataManager.removePlayerFromRoom(playerName, roomName)
         socket.emit("leaveRoomResult", success)
         socket.leave(roomName)
 
@@ -559,7 +556,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
     private disconnect(socket: Socket) {
         let playerName = this.socketManager.getPlayerName(socket.id)
         if (playerName !== undefined) {
-            let roomsEvicted = this.roomDataManager.removePlayer(playerName)
+            let roomsEvicted = this.roomDataManager.kickPlayer(playerName)
             for (let roomName of roomsEvicted) {
                 this.cleanRoom(roomName)
                 this.sendRoomData(roomName)
