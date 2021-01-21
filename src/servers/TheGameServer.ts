@@ -454,13 +454,13 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
         let gameData = this.roomDataManager.getGameData(roomName)
 
-        gameData.endTurn()
         gameData.replenish()
 
         if (autoSortHand) {
             gameData.sortHand(gameData.getCurrentPlayer()!)
         }
 
+        gameData.endTurn()
         gameData.nextPlayer()
 
         this.sendRoomData(roomName)
