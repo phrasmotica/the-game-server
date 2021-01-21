@@ -169,7 +169,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
             let spectatorsInRoom = this.getSpectatorsInRoom(roomName)
             for (let spectator of spectatorsInRoom) {
                 console.log(`Kicking spectator ${spectator} from room ${roomName}`)
-                this.socketManager.sockets[spectator].emit("kick")
+                this.socketManager.getSocket(spectator).emit("kick")
             }
 
             this.roomDataManager.clear(roomName)
@@ -192,8 +192,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
      * Handler for a player joining the server from the given socket.
      */
     private joinServer(socket: Socket, playerName: string) {
-        this.socketManager.setPlayerName(socket.id, playerName)
-        this.socketManager.setSocket(playerName, socket)
+        this.socketManager.setPlayerData(socket, playerName)
         console.log(`Player ${playerName} joined the server!`)
 
         socket.emit("joinServerResult", true)
@@ -563,7 +562,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
      * Handler for a player disconnecting from the server.
      */
     private disconnect(socket: Socket) {
-        let playerName = this.socketManager.getPlayerName(socket.id)
+        let playerName = this.socketManager.getPlayerData(socket.id).name
         if (playerName !== undefined) {
             let roomsEvicted = this.roomDataManager.kickPlayer(playerName)
             for (let roomName of roomsEvicted) {
@@ -571,8 +570,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
                 this.sendRoomData(roomName)
             }
 
-            this.socketManager.removeSocket(playerName)
-            this.socketManager.removePlayerName(socket.id)
+            this.socketManager.removePlayer(socket.id)
             this.sendAllPlayersData()
 
             console.log(`Player ${playerName} left the server.`)
