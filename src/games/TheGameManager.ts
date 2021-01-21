@@ -1,7 +1,5 @@
-import { RoomData } from "game-server-lib"
+import { RoomData, RoomDataManager } from "game-server-lib"
 import { GameData } from "the-game-lib"
-
-import { RoomDataManager } from "../data/RoomDataManager"
 
 /**
  * Class for managing a game of The Game.

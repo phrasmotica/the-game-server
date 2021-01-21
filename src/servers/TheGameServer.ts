@@ -1,21 +1,27 @@
 import express from "express"
 import http from "http"
-import socketIo, { Socket } from "socket.io"
+import socketIo, { Server, Socket } from "socket.io"
 
-import { Message, RoomWith } from "game-server-lib"
+import { GameServer, Message, RoomDataManager, RoomWith, SocketManager } from "game-server-lib"
+
 import { GameData, GameStartResult, RuleSet, VoteResult } from "the-game-lib"
 
-import { GameServer } from "./GameServer"
-
 import { ServerSettings } from "../config/ServerSettings"
-
-import { SocketManager } from "../data/SocketManager"
-import { RoomDataManager } from "../data/RoomDataManager"
 
 /**
  * Represents a server for The Game.
  */
 export class TheGameServer extends GameServer<ServerSettings> {
+    /**
+     * The underlying socket IO server.
+     */
+    protected server: http.Server
+
+    /**
+     * The underlying socket IO server.
+     */
+    protected io: Server
+
     /**
      * List of rooms that should persist.
      */
@@ -26,10 +32,12 @@ export class TheGameServer extends GameServer<ServerSettings> {
      */
     constructor(
         serverSettings: ServerSettings,
-        socketManager: SocketManager,
+        protected socketManager: SocketManager,
         private roomDataManager: RoomDataManager<GameData>
     ) {
-        super(serverSettings, socketManager)
+        super(serverSettings)
+        this.server = this.createHttpServer()
+        this.io = this.createSocketIOServer()
         this.roomRetentionList = [...serverSettings.roomNames]
     }
 

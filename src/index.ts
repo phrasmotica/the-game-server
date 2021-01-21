@@ -1,6 +1,7 @@
+import { SocketManager } from "game-server-lib"
+
 import { ServerSettings } from "./config/ServerSettings"
 
-import { SocketManager } from "./data/SocketManager"
 import { TheGameManager } from "./games/TheGameManager"
 
 import { TheGameServer } from "./servers/TheGameServer"

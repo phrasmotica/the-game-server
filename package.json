@@ -22,7 +22,7 @@
     "dotenv": "^8.2.0",
     "eslint": "^7.9.0",
     "express": "^4.17.1",
-    "game-server-lib": "^1.0.2",
+    "game-server-lib": "^1.0.3",
     "socket.io": "^2.3.0",
     "the-game-lib": "^1.0.5",
     "ts-node-dev": "^1.0.0-pre.63",
