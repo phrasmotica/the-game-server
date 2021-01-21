@@ -32,6 +32,7 @@ export class ServerSettings {
      */
     private constructor(
         public port: number,
+        public hostName: string | undefined,
         public roomNames: string[],
         public maxRooms: number,
         public maxPlayersPerRoom: number,
@@ -44,6 +45,7 @@ export class ServerSettings {
     static readFromEnv() {
         return new ServerSettings(
             Number(process.env.PORT || this.DEFAULT_PORT),
+            process.env.SERVER_HOSTNAME,
             process.env.SERVER_ROOM_NAMES?.split(",") || this.DEFAULT_ROOM_NAMES,
             Number(process.env.SERVER_MAX_ROOMS || this.DEFAULT_MAX_ROOMS),
             Number(process.env.SERVER_MAX_PLAYERS_PER_ROOM || this.DEFAULT_MAX_PLAYERS_PER_ROOM),
