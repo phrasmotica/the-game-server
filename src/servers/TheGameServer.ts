@@ -100,7 +100,8 @@ export class TheGameServer extends GameServer<ServerSettings> {
         this.serverSettings.roomNames.forEach(n => this.roomDataManager.ensureRoomExists(n))
 
         const port = this.serverSettings.port
-        this.server.listen(port, () => console.log(`Listening on port ${port}`))
+        const hostName = this.serverSettings.hostName
+        this.server.listen(port, () => console.log(`Listening on ${hostName} port ${port}`))
     }
 
     /**
