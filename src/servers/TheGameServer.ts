@@ -87,6 +87,8 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
             socket.on("playCard", (req: RoomWith<[string, number, number]>) => this.playCard(req))
 
+            socket.on("mulligan", (req: RoomWith<[number, string]>) => this.returnToHand(req))
+
             socket.on("endTurn", (req: RoomWith<boolean>) => this.endTurn(req))
 
             socket.on("leaveGame", (req: RoomWith<string>) => this.leaveGame(socket, req))
@@ -449,6 +451,20 @@ export class TheGameServer extends GameServer<ServerSettings> {
         let pileIndex = req.data[2]
 
         this.roomDataManager.getGameData(roomName).playCard(player, card, pileIndex)
+
+        this.sendRoomData(roomName)
+    }
+
+    /**
+     * Handler for the player returning the top card from the given pile to
+     * their hand.
+     */
+    private returnToHand(req: RoomWith<[number, string]>) {
+        let roomName = req.roomName
+        let pileIndex = req.data[0]
+        let player = req.data[1]
+
+        this.roomDataManager.getGameData(roomName).returnToHand(pileIndex, player)
 
         this.sendRoomData(roomName)
     }
