@@ -4,7 +4,7 @@ import socketIo, { Server, Socket } from "socket.io"
 
 import { GameServer, Message, RoomDataManager, RoomWith, SocketManager } from "game-server-lib"
 
-import { GameData, GameStartResult, RuleSet, VoteResult } from "the-game-lib"
+import { Card, GameData, GameStartResult, RuleSet, VoteResult } from "the-game-lib"
 
 import { ServerSettings } from "../config/ServerSettings"
 
@@ -83,11 +83,11 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
             socket.on("sortHand", (req: RoomWith<string>) => this.sortHand(req))
 
-            socket.on("setCardToPlay", (req: RoomWith<number | undefined>) => this.setCardToPlay(req))
+            socket.on("setCardToPlay", (req: RoomWith<Card | undefined>) => this.setCardToPlay(req))
 
-            socket.on("playCard", (req: RoomWith<[string, number, number]>) => this.playCard(req))
+            socket.on("playCard", (req: RoomWith<[string, Card, number]>) => this.playCard(req))
 
-            socket.on("mulligan", (req: RoomWith<[number, string]>) => this.returnToHand(req))
+            socket.on("mulligan", (req: RoomWith<[number, string, boolean]>) => this.mulligan(req))
 
             socket.on("endTurn", (req: RoomWith<boolean>) => this.endTurn(req))
 
@@ -432,7 +432,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
     /**
      * Handler for a player setting the card to play.
      */
-    private setCardToPlay(res: RoomWith<number | undefined>) {
+    private setCardToPlay(res: RoomWith<Card | undefined>) {
         let roomName = res.roomName
         let cardToPlay = res.data
 
@@ -444,7 +444,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
     /**
      * Handler for a player playing a card from their hand.
      */
-    private playCard(req: RoomWith<[string, number, number]>) {
+    private playCard(req: RoomWith<[string, Card, number]>) {
         let roomName = req.roomName
         let player = req.data[0]
         let card = req.data[1]
@@ -459,12 +459,30 @@ export class TheGameServer extends GameServer<ServerSettings> {
      * Handler for the player returning the top card from the given pile to
      * their hand.
      */
-    private returnToHand(req: RoomWith<[number, string]>) {
+    private mulligan(req: RoomWith<[number, string, boolean]>) {
         let roomName = req.roomName
         let pileIndex = req.data[0]
         let player = req.data[1]
+        let autoSortHand = req.data[2]
 
-        this.roomDataManager.getGameData(roomName).returnToHand(pileIndex, player)
+        let gameData = this.roomDataManager.getGameData(roomName)
+
+        if (gameData.canMulligan()) {
+            let result = gameData.mulligan(pileIndex, player)
+            if (result.success) {
+                console.log(`Player ${player} mulliganed ${result.card!.value}, which they played on ${result.previousCard!.value}.`)
+            }
+            else {
+                console.log(`Player ${player} failed to take a mulligan!`)
+            }
+
+            if (autoSortHand) {
+                gameData.sortHand(player)
+            }
+        }
+        else {
+            console.log(`Player ${player} cannot mulligan in room ${roomName} because the limit has been reached!`)
+        }
 
         this.sendRoomData(roomName)
     }
@@ -486,6 +504,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
         gameData.endTurn()
         gameData.nextPlayer()
+        gameData.startTurn()
 
         this.sendRoomData(roomName)
     }
@@ -578,7 +597,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
      * Handler for a player disconnecting from the server.
      */
     private disconnect(socket: Socket) {
-        let playerName = this.socketManager.getPlayerData(socket.id).name
+        let playerName = this.socketManager.getPlayerData(socket.id)?.name
         if (playerName !== undefined) {
             let roomsEvicted = this.roomDataManager.kickPlayer(playerName)
             for (let roomName of roomsEvicted) {
