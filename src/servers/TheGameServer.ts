@@ -504,6 +504,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
         gameData.endTurn()
         gameData.nextPlayer()
+        gameData.startTurn()
 
         this.sendRoomData(roomName)
     }
