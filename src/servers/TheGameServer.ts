@@ -171,7 +171,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
             let spectatorsInRoom = this.getSpectatorsInRoom(roomName)
             for (let spectator of spectatorsInRoom) {
                 console.log(`Kicking spectator ${spectator} from room ${roomName}`)
-                this.socketManager.getSocket(spectator).emit("kick")
+                this.socketManager.getSocket(spectator)?.emit("kick")
             }
 
             this.roomDataManager.clear(roomName)
