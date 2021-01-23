@@ -24,7 +24,7 @@
     "express": "^4.17.1",
     "game-server-lib": "^1.0.6",
     "socket.io": "^2.3.0",
-    "the-game-lib": "^1.0.19",
+    "the-game-lib": "^1.0.20",
     "ts-node-dev": "^1.0.0-pre.63",
     "typescript": "^4.0.3"
   }
