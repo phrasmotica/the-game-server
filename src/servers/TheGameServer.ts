@@ -89,7 +89,7 @@ export class TheGameServer extends GameServer<ServerSettings> {
 
             socket.on("mulligan", (req: RoomWith<[number, string, boolean]>) => this.mulligan(req))
 
-            socket.on("endTurn", (req: RoomWith<boolean>) => this.endTurn(req))
+            socket.on("endTurn", (req: RoomWith<[boolean, boolean]>) => this.endTurn(req))
 
             socket.on("leaveGame", (req: RoomWith<string>) => this.leaveGame(socket, req))
 
@@ -490,20 +490,34 @@ export class TheGameServer extends GameServer<ServerSettings> {
     /**
      * Handler for a player ending their turn in the given room.
      */
-    private endTurn(req: RoomWith<boolean>) {
+    private endTurn(req: RoomWith<[boolean, boolean]>) {
         let roomName = req.roomName
-        let autoSortHand = req.data
 
         let gameData = this.roomDataManager.getGameData(roomName)
+        let currentPlayer = gameData.getCurrentPlayer()!
+
+        let passTurn = req.data[0]
+        if (passTurn) {
+            gameData.passTurn(currentPlayer)
+            console.log(`Player ${currentPlayer} passed their turn in room ${roomName}`)
+        }
+        else {
+            gameData.clearPassedTurn(currentPlayer)
+            console.log(`Player ${currentPlayer} cleared their passed turn in room ${roomName}`)
+        }
 
         gameData.replenish()
 
+        let autoSortHand = req.data[1]
         if (autoSortHand) {
-            gameData.sortHand(gameData.getCurrentPlayer()!)
+            gameData.sortHand(currentPlayer)
         }
 
         gameData.endTurn()
-        gameData.nextPlayer()
+
+        let nextPlayer = gameData.nextPlayer()
+        console.log(`It is now ${nextPlayer}'s turn in room ${roomName}`)
+
         gameData.startTurn()
 
         this.sendRoomData(roomName)
