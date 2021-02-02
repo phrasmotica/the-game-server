@@ -506,11 +506,13 @@ export class TheGameServer extends GameServer<ServerSettings> {
             console.log(`Player ${currentPlayer} cleared their passed turn in room ${roomName}`)
         }
 
-        gameData.replenish()
+        if (!gameData.isLost()) {
+            gameData.replenish()
 
-        let autoSortHand = req.data[1]
-        if (autoSortHand) {
-            gameData.sortHand(currentPlayer)
+            let autoSortHand = req.data[1]
+            if (autoSortHand) {
+                gameData.sortHand(currentPlayer)
+            }
         }
 
         gameData.endTurn()
